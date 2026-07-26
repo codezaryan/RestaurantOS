@@ -1,0 +1,252 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("WAITER") // OWNER, MANAGER, CHEF, WAITER, CASHIER, STORE_MANAGER
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders         Order[]          @relation("WaiterOrders")
+  stockMovements StockMovement[]
+  auditLogs      AuditLog[]
+}
+
+model Table {
+  id          String   @id @default(uuid())
+  tableNumber String   @unique
+  capacity    Int
+  status      String   @default("AVAILABLE") // AVAILABLE, OCCUPIED, RESERVED, CLEANING
+  qrCode      String?
+  section     String?  @default("Main Dining")
+  createdAt   DateTime @default(now())
+
+  orders Order[]
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  type        String   @default("MENU") // MENU, INVENTORY, EXPENSE
+  createdAt   DateTime @default(now())
+
+  menuItems   MenuItem[]
+  ingredients Ingredient[]
+  expenses    Expense[]
+}
+
+model MenuItem {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  price           Float
+  suggestedPrice  Float?
+  prepTimeMinutes Int      @default(15)
+  isAvailable     Boolean  @default(true)
+  imageUrl        String?
+  categoryId      String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  category   Category     @relation(fields: [categoryId], references: [id])
+  recipes    Recipe[]
+  orderItems OrderItem[]
+}
+
+model Ingredient {
+  id              String    @id @default(uuid())
+  name            String
+  unit            String    // kg, liters, pcs, etc.
+  currentStock    Float     @default(0)
+  minStockLevel   Float     @default(10)
+  reorderQuantity Float     @default(50)
+  costPerUnit     Float     @default(0)
+  supplierId      String?
+  categoryId      String?
+  expiryDate      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  supplier       Supplier?           @relation(fields: [supplierId], references: [id])
+  category       Category?           @relation(fields: [categoryId], references: [id])
+  recipes        Recipe[]
+  stockMovements StockMovement[]
+  poItems        PurchaseOrderItem[]
+}
+
+model Recipe {
+  id               String @id @default(uuid())
+  menuItemId       String
+  ingredientId     String
+  quantityRequired Float  // Quantity needed per 1 order of item
+
+  menuItem   MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+}
+
+model Warehouse {
+  id          String   @id @default(uuid())
+  name        String
+  location    String?
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model StockMovement {
+  id           String   @id @default(uuid())
+  ingredientId String
+  type         String   // IN, OUT, WASTE, ADJUSTMENT
+  quantity     Float
+  reason       String?
+  userId       String?
+  createdAt    DateTime @default(now())
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id])
+}
+
+model Supplier {
+  id            String   @id @default(uuid())
+  name          String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  createdAt     DateTime @default(now())
+
+  ingredients    Ingredient[]
+  purchaseOrders PurchaseOrder[]
+  expenses       Expense[]
+  invoices       Invoice[]
+}
+
+model PurchaseOrder {
+  id               String    @id @default(uuid())
+  poNumber         String    @unique
+  supplierId       String
+  status           String    @default("DRAFT") // DRAFT, ORDERED, RECEIVED, CANCELLED
+  totalAmount      Float     @default(0)
+  orderDate        DateTime  @default(now())
+  expectedDelivery DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  items    PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id              String @id @default(uuid())
+  purchaseOrderId String
+  ingredientId    String
+  quantity        Float
+  unitCost        Float
+  totalCost       Float
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  ingredient    Ingredient    @relation(fields: [ingredientId], references: [id])
+}
+
+model Order {
+  id            String   @id @default(uuid())
+  orderNumber   String   @unique
+  tableId       String?
+  waiterId      String?
+  status        String   @default("PENDING") // PENDING, PREPARING, READY, SERVED, COMPLETED, CANCELLED
+  paymentStatus String   @default("PENDING") // PENDING, PAID, REFUNDED
+  paymentMethod String?  @default("CASH")
+  subtotal      Float    @default(0)
+  taxAmount     Float    @default(0)
+  totalAmount   Float    @default(0)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  table      Table?      @relation(fields: [tableId], references: [id])
+  waiter     User?       @relation("WaiterOrders", fields: [waiterId], references: [id])
+  orderItems OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  menuItemId String
+  quantity   Int      @default(1)
+  unitPrice  Float
+  notes      String?
+  status     String   @default("PENDING") // PENDING, COOKING, READY
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+}
+
+model Expense {
+  id            String   @id @default(uuid())
+  title         String
+  amount        Float
+  categoryId    String?
+  supplierId    String?
+  date          DateTime @default(now())
+  paymentStatus String   @default("PAID") // PAID, UNPAID
+  invoiceId     String?
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  category Category? @relation(fields: [categoryId], references: [id])
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+  invoice  Invoice?  @relation(fields: [invoiceId], references: [id])
+}
+
+model Invoice {
+  id                   String    @id @default(uuid())
+  invoiceNumber        String
+  supplierId           String?
+  uploadPath           String
+  fileType             String    @default("image") // image, pdf
+  invoiceDate          DateTime?
+  subtotal             Float     @default(0)
+  tax                  Float     @default(0)
+  totalAmount          Float     @default(0)
+  ocrRawText           String?
+  extractionConfidence Float     @default(0.9)
+  status               String    @default("PROCESSED") // PROCESSED, PENDING_REVIEW, APPROVED, REJECTED
+  createdAt            DateTime  @default(now())
+
+  supplier Supplier?     @relation(fields: [supplierId], references: [id])
+  items    InvoiceItem[]
+  expenses Expense[]
+}
+
+model InvoiceItem {
+  id          String  @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Float   @default(1)
+  unitPrice   Float   @default(0)
+  totalAmount Float   @default(0)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  userName  String?
+  action    String
+  module    String
+  details   String?
+  timestamp DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
