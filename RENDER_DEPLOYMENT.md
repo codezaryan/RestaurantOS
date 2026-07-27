@@ -74,7 +74,13 @@
    - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port 8000`
    - **Health Check Path**: `/health`
 
-3. **Environment Variables**:
+3. **Start Command** (⚠️ **IMPORTANT — Render defaults to `gunicorn` which is wrong**):
+   ```
+   uvicorn main:app --host 0.0.0.0 --port 8000
+   ```
+   Make sure this is set in the **Start Command** field, not the default `gunicorn your_application.wsgi`.
+
+4. **Environment Variables**:
 
 | Variable | Value | Notes |
 |----------|-------|-------|
