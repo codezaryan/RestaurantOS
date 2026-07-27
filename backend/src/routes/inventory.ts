@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateToken, AuthRequest, requireRoles } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // ==================== INGREDIENTS & STOCK ====================
 
 // GET /api/inventory/ingredients
-router.get('/ingredients', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/ingredients', authenticateToken, requireRoles('OWNER', 'MANAGER', 'CHEF', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const ingredients = await prisma.ingredient.findMany({
       include: { supplier: true, category: true },
@@ -21,7 +21,7 @@ router.get('/ingredients', authenticateToken, async (req: AuthRequest, res: Resp
 });
 
 // POST /api/inventory/ingredients
-router.post('/ingredients', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/ingredients', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const { name, unit, currentStock, minStockLevel, reorderQuantity, costPerUnit, supplierId, categoryId } = req.body;
     const ingredient = await prisma.ingredient.create({
@@ -42,8 +42,43 @@ router.post('/ingredients', authenticateToken, async (req: AuthRequest, res: Res
   }
 });
 
+// PATCH /api/inventory/ingredients/:id
+router.patch('/ingredients/:id', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, unit, currentStock, minStockLevel, reorderQuantity, costPerUnit, supplierId, categoryId } = req.body;
+    const ingredient = await prisma.ingredient.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(unit !== undefined && { unit }),
+        ...(currentStock !== undefined && { currentStock: Number(currentStock) }),
+        ...(minStockLevel !== undefined && { minStockLevel: Number(minStockLevel) }),
+        ...(reorderQuantity !== undefined && { reorderQuantity: Number(reorderQuantity) }),
+        ...(costPerUnit !== undefined && { costPerUnit: Number(costPerUnit) }),
+        ...(supplierId !== undefined && { supplierId }),
+        ...(categoryId !== undefined && { categoryId })
+      }
+    });
+    return res.json(ingredient);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to update ingredient' });
+  }
+});
+
+// DELETE /api/inventory/ingredients/:id
+router.delete('/ingredients/:id', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.ingredient.delete({ where: { id } });
+    return res.json({ message: 'Ingredient deleted successfully' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to delete ingredient' });
+  }
+});
+
 // POST /api/inventory/stock-movement (Stock In / Stock Out / Waste)
-router.post('/stock-movement', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/stock-movement', authenticateToken, requireRoles('OWNER', 'MANAGER', 'CHEF', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const { ingredientId, type, quantity, reason } = req.body;
     const qty = Number(quantity);
@@ -88,7 +123,7 @@ router.post('/stock-movement', authenticateToken, async (req: AuthRequest, res: 
 });
 
 // GET /api/inventory/movements
-router.get('/movements', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/movements', authenticateToken, requireRoles('OWNER', 'MANAGER', 'CHEF', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const movements = await prisma.stockMovement.findMany({
       include: { ingredient: true, user: true },
@@ -104,7 +139,7 @@ router.get('/movements', authenticateToken, async (req: AuthRequest, res: Respon
 // ==================== PURCHASE ORDERS & SUPPLIERS ====================
 
 // GET /api/inventory/suppliers
-router.get('/suppliers', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/suppliers', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const suppliers = await prisma.supplier.findMany({
       include: { ingredients: true, purchaseOrders: true },
@@ -117,7 +152,7 @@ router.get('/suppliers', authenticateToken, async (req: AuthRequest, res: Respon
 });
 
 // POST /api/inventory/suppliers
-router.post('/suppliers', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/suppliers', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const { name, contactPerson, email, phone, address } = req.body;
     const supplier = await prisma.supplier.create({
@@ -129,8 +164,34 @@ router.post('/suppliers', authenticateToken, async (req: AuthRequest, res: Respo
   }
 });
 
+// PATCH /api/inventory/suppliers/:id
+router.patch('/suppliers/:id', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, contactPerson, email, phone, address } = req.body;
+    const supplier = await prisma.supplier.update({
+      where: { id },
+      data: { name, contactPerson, email, phone, address }
+    });
+    return res.json(supplier);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to update supplier' });
+  }
+});
+
+// DELETE /api/inventory/suppliers/:id
+router.delete('/suppliers/:id', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.supplier.delete({ where: { id } });
+    return res.json({ message: 'Supplier deleted successfully' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to delete supplier' });
+  }
+});
+
 // GET /api/inventory/purchase-orders
-router.get('/purchase-orders', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/purchase-orders', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const pos = await prisma.purchaseOrder.findMany({
       include: { supplier: true, items: { include: { ingredient: true } } },
@@ -143,7 +204,7 @@ router.get('/purchase-orders', authenticateToken, async (req: AuthRequest, res: 
 });
 
 // POST /api/inventory/purchase-orders
-router.post('/purchase-orders', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/purchase-orders', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const { supplierId, items } = req.body;
     let totalAmount = 0;
@@ -176,6 +237,116 @@ router.post('/purchase-orders', authenticateToken, async (req: AuthRequest, res:
     return res.status(201).json(po);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to create purchase order' });
+  }
+});
+
+// ==================== WAREHOUSE / STORE MANAGEMENT ====================
+
+// GET /api/inventory/warehouses
+router.get('/warehouses', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const warehouses = await prisma.warehouse.findMany({
+      orderBy: { name: 'asc' }
+    });
+    return res.json(warehouses);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch warehouses' });
+  }
+});
+
+// POST /api/inventory/warehouses
+router.post('/warehouses', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, location, description } = req.body;
+    const warehouse = await prisma.warehouse.create({
+      data: { name, location, description }
+    });
+    return res.status(201).json(warehouse);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to create warehouse' });
+  }
+});
+
+// PATCH /api/inventory/warehouses/:id
+router.patch('/warehouses/:id', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, location, description } = req.body;
+    const warehouse = await prisma.warehouse.update({
+      where: { id },
+      data: { name, location, description }
+    });
+    return res.json(warehouse);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to update warehouse' });
+  }
+});
+
+// DELETE /api/inventory/warehouses/:id
+router.delete('/warehouses/:id', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.warehouse.delete({ where: { id } });
+    return res.json({ message: 'Warehouse deleted successfully' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to delete warehouse' });
+  }
+});
+
+// ==================== CATEGORIES (Menu, Inventory, Expense) ====================
+
+// GET /api/inventory/categories
+router.get('/categories', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { type } = req.query;
+    const where: any = {};
+    if (type) where.type = type as string;
+    const categories = await prisma.category.findMany({
+      where,
+      orderBy: { name: 'asc' }
+    });
+    return res.json(categories);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+// POST /api/inventory/categories
+router.post('/categories', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, description, type } = req.body;
+    const category = await prisma.category.create({
+      data: { name, description, type: type || 'MENU' }
+    });
+    return res.status(201).json(category);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to create category' });
+  }
+});
+
+// PATCH /api/inventory/categories/:id
+router.patch('/categories/:id', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, type } = req.body;
+    const category = await prisma.category.update({
+      where: { id },
+      data: { name, description, type }
+    });
+    return res.json(category);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to update category' });
+  }
+});
+
+// DELETE /api/inventory/categories/:id
+router.delete('/categories/:id', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.category.delete({ where: { id } });
+    return res.json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to delete category' });
   }
 });
 

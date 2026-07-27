@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { JWT_SECRET, authenticateToken, AuthRequest, Role } from '../middleware/auth';
+import { JWT_SECRET, authenticateToken, AuthRequest, Role, requireRoles } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -10,7 +10,15 @@ const prisma = new PrismaClient();
 // POST /api/auth/login
 router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { email, requestedRole } = req.body;
+    const { email, password, requestedRole } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required.' });
+    }
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required.' });
+    }
 
     let user = await prisma.user.findUnique({ where: { email } });
 
@@ -18,12 +26,36 @@ router.post('/login', async (req: Request, res: Response) => {
       user = await prisma.user.findFirst({ where: { role: requestedRole } });
     }
 
-    if (!user) {
-      user = await prisma.user.findFirst({ where: { role: 'OWNER' } });
+if (!user) {
+      // Log failed login attempt
+      try {
+        await prisma.auditLog.create({
+          data: {
+            action: 'LOGIN_FAILED',
+            module: 'AUTHENTICATION',
+            details: `Failed login attempt for email: ${email}`
+          }
+        });
+      } catch {}
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+    // Verify password against hashed password in database
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      // Log failed password attempt
+      try {
+        await prisma.auditLog.create({
+          data: {
+            userId: user.id,
+            userName: user.name,
+            action: 'LOGIN_FAILED',
+            module: 'AUTHENTICATION',
+            details: `Failed login attempt for user ${user.name} (${user.email}) - invalid password`
+          }
+        });
+      } catch {}
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
     const token = jwt.sign(
@@ -64,7 +96,7 @@ router.get('/me', authenticateToken, (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/auth/users
-router.get('/users', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/users', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -84,10 +116,15 @@ router.get('/users', authenticateToken, async (req: AuthRequest, res: Response) 
 });
 
 // POST /api/auth/users
-router.post('/users', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/users', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const { name, email, password, role, phone } = req.body;
-    const hashedPassword = await bcrypt.hash(password || 'password123', 10);
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required for new staff members.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await prisma.user.create({
       data: {

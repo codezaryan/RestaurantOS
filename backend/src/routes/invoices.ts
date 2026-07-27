@@ -5,7 +5,7 @@ import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
 import { OCRService } from '../services/ocrService';
 import { ExcelService } from '../services/excelService';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateToken, AuthRequest, requireRoles } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -31,7 +31,7 @@ const upload = multer({
 });
 
 // GET /api/invoices
-router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const invoices = await prisma.invoice.findMany({
       include: { supplier: true, items: true, expenses: true },
@@ -44,7 +44,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/invoices/upload
-router.post('/upload', authenticateToken, upload.array('invoices', 10), async (req: AuthRequest, res: Response) => {
+router.post('/upload', authenticateToken, requireRoles('OWNER', 'MANAGER', 'STORE_MANAGER'), upload.array('invoices', 10), async (req: AuthRequest, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) {
@@ -133,7 +133,7 @@ router.post('/upload', authenticateToken, upload.array('invoices', 10), async (r
 });
 
 // GET /api/invoices/export-excel
-router.get('/export-excel', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/export-excel', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const excelBuffer = await excelService.generateExpenseRegister();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

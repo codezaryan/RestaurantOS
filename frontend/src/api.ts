@@ -4,13 +4,30 @@ import {
   AIShortagePrediction, AIReorderRecommendation, AIPricingSuggestion, AIPrepTimeEstimate, AIWasteAnalysis 
 } from './types';
 
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
+
+const savedToken = localStorage.getItem('restaurant_os_token');
+if (savedToken) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+}
 
 export const api = {
   // Auth
-  login: async (email: string, requestedRole?: string) => {
-    const res = await axios.post(`${API_BASE}/auth/login`, { email, requestedRole });
+  login: async (email: string, password: string, requestedRole?: string) => {
+    const res = await axios.post(`${API_BASE}/auth/login`, { email, password, requestedRole });
+    if (res.data?.token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+      localStorage.setItem('restaurant_os_token', res.data.token);
+    }
     return res.data;
+  },
+  logout: () => {
+    delete axios.defaults.headers.common['Authorization'];
+    localStorage.removeItem('restaurant_os_token');
+    localStorage.removeItem('restaurant_os_user');
+  },
+  isAuthenticated: () => {
+    return !!localStorage.getItem('restaurant_os_token');
   },
   getStaff: async () => {
     const res = await axios.get<User[]>(`${API_BASE}/auth/users`);
@@ -66,6 +83,10 @@ export const api = {
   },
   getSuppliers: async () => {
     const res = await axios.get<Supplier[]>(`${API_BASE}/inventory/suppliers`);
+    return res.data;
+  },
+  getStockMovements: async () => {
+    const res = await axios.get(`${API_BASE}/inventory/movements`);
     return res.data;
   },
   getPurchaseOrders: async () => {

@@ -12,9 +12,11 @@ import { InventoryView } from './components/InventoryView';
 import { ExpensesInvoicesView } from './components/ExpensesInvoicesView';
 import { AIStudioView } from './components/AIStudioView';
 import { StaffView } from './components/StaffView';
+import { LoginScreen } from './components/LoginScreen';
 import { io } from 'socket.io-client';
 
 export const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(api.isAuthenticated());
   const [currentRole, setCurrentRole] = useState<Role>('OWNER');
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
 
@@ -89,10 +91,13 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     loadAllData();
 
     // Socket.io Listener
-    const socket = io('http://localhost:5000');
+    const socketUrl = import.meta.env.VITE_WS_URL || undefined;
+    const socket = io(socketUrl);
     socket.on('new_order', (newOrder: Order) => {
       setOrders(prev => [newOrder, ...prev]);
     });
@@ -103,15 +108,21 @@ export const App: React.FC = () => {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [isAuthenticated]);
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    api.logout();
+    setIsAuthenticated(false);
+    setCurrentRole('OWNER');
+  };
 
   const handleRoleChange = async (newRole: Role) => {
     setCurrentRole(newRole);
-    try {
-      await api.login('owner@restaurantos.io', newRole);
-    } catch (e) {
-      console.warn(e);
-    }
+    // Role switching no longer re-logins — uses existing token
   };
 
   // Handler functions
@@ -155,9 +166,14 @@ export const App: React.FC = () => {
     setStaff(updatedStaff);
   };
 
+  // If not authenticated, show login screen
+  if (!isAuthenticated) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="min-h-screen bg-[#090d16] flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
-      <Navbar currentRole={currentRole} onRoleChange={handleRoleChange} />
+      <Navbar currentRole={currentRole} onRoleChange={handleRoleChange} onLogout={handleLogout} />
 
       <div className="flex flex-1">
         <Sidebar

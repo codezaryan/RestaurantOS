@@ -1,13 +1,14 @@
 import React from 'react';
 import { Role } from '../types';
-import { Shield, Sparkles, ChefHat, UserCheck, Utensils, DollarSign, Store, Activity } from 'lucide-react';
+import { Shield, Sparkles, ChefHat, UserCheck, Utensils, DollarSign, Store, Activity, LogOut } from 'lucide-react';
 
 interface NavbarProps {
   currentRole: Role;
   onRoleChange: (role: Role) => void;
+  onLogout?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentRole, onRoleChange }) => {
+export const Navbar: React.FC<NavbarProps> = ({ currentRole, onRoleChange, onLogout }) => {
   const roles: { role: Role; label: string; icon: React.ReactNode; color: string }[] = [
     { role: 'OWNER', label: 'Owner', icon: <Shield className="w-3.5 h-3.5" />, color: 'bg-purple-500/20 text-purple-300 border-purple-500/40' },
     { role: 'MANAGER', label: 'Manager', icon: <UserCheck className="w-3.5 h-3.5" />, color: 'bg-blue-500/20 text-blue-300 border-blue-500/40' },
@@ -62,6 +63,17 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRole, onRoleChange }) => 
             );
           })}
         </div>
+
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/30 transition-all ml-1"
+            title="Sign Out"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
+          </button>
+        )}
       </div>
     </header>
   );

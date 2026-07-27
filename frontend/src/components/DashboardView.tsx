@@ -55,7 +55,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   ];
 
   return (
-    <div className="space-[#1e293b] space-y-6">
+    <div className="space-y-6">
       {/* Top Banner */}
       <div className="flex flex-wrap items-center justify-between gap-4 glass-card p-6 rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900/90 via-blue-950/30 to-slate-900/90">
         <div>

@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { authenticateToken, AuthRequest, requireRoles } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
 
 // GET /api/expenses
-router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/', authenticateToken, requireRoles('OWNER', 'MANAGER', 'CASHIER'), async (req: AuthRequest, res: Response) => {
   try {
     const expenses = await prisma.expense.findMany({
       include: { category: true, supplier: true, invoice: true },
@@ -19,7 +19,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/expenses
-router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const { title, amount, categoryId, supplierId, date, notes } = req.body;
     const expense = await prisma.expense.create({
@@ -40,7 +40,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/expenses/summary
-router.get('/summary', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/summary', authenticateToken, requireRoles('OWNER', 'MANAGER'), async (req: AuthRequest, res: Response) => {
   try {
     const expenses = await prisma.expense.findMany({
       include: { category: true }
