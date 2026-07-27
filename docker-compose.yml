@@ -50,6 +50,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
     container_name: restaurant_os_frontend
     ports:
       - "3000:80"
