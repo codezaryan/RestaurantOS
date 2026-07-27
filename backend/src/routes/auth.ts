@@ -108,12 +108,14 @@ router.post('/login', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('[AUTH] Login error:', error?.message || error);
+    console.error('[AUTH] Full stack:', error?.stack || 'No stack trace available');
     // Return the actual error message + stack in development, generic message in production
     const isDev = process.env.NODE_ENV !== 'production';
     return res.status(500).json({ 
       error: 'Failed to process login',
       ...(isDev && { detail: error?.message || String(error) }),
-      code: 'LOGIN_ERROR'
+      code: 'LOGIN_ERROR',
+      ...(isDev && { prismaCode: error?.code || null })
     });
   }
 });
@@ -177,6 +179,51 @@ router.post('/users', authenticateToken, requireRoles('OWNER', 'MANAGER'), async
     return res.status(201).json(newUser);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to create staff member' });
+  }
+});
+
+// ==================== DATABASE SEED ENDPOINT ====================
+
+// POST /api/auth/seed
+// Seeds the database with demo users and data if no users exist.
+// Useful for Render deployments where Shell access isn't convenient.
+router.post('/seed', async (req: Request, res: Response) => {
+  try {
+    // Check if already seeded
+    const existingUserCount = await prisma.user.count();
+    if (existingUserCount > 0) {
+      return res.status(400).json({
+        error: 'Database is already seeded',
+        userCount: existingUserCount
+      });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const passwordHash = await bcrypt.hash('password123', 10);
+
+    // Create all 6 role users
+    const users = await Promise.all([
+      prisma.user.create({ data: { name: 'Praveen Yadav', email: 'owner@restaurantos.io', password: passwordHash, role: 'OWNER', phone: '+1-555-0192' } }),
+      prisma.user.create({ data: { name: 'Arun Kumar', email: 'manager@restaurantos.io', password: passwordHash, role: 'MANAGER', phone: '+1-555-0193' } }),
+      prisma.user.create({ data: { name: 'Chef Bharath', email: 'chef@restaurantos.io', password: passwordHash, role: 'CHEF', phone: '+1-555-0194' } }),
+      prisma.user.create({ data: { name: 'Alex Rivers', email: 'waiter@restaurantos.io', password: passwordHash, role: 'WAITER', phone: '+1-555-0195' } }),
+      prisma.user.create({ data: { name: 'Sarah Connor', email: 'cashier@restaurantos.io', password: passwordHash, role: 'CASHIER', phone: '+1-555-0196' } }),
+      prisma.user.create({ data: { name: 'David Miller', email: 'store@restaurantos.io', password: passwordHash, role: 'STORE_MANAGER', phone: '+1-555-0197' } }),
+    ]);
+
+    console.log('[SEED] ✅ Created 6 role users (Owner, Manager, Chef, Waiter, Cashier, Store Manager)');
+
+    return res.status(201).json({
+      message: 'Database seeded successfully',
+      users: users.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role })),
+      loginHint: 'Use any email above with password: password123'
+    });
+  } catch (error: any) {
+    console.error('[SEED] Error seeding database:', error?.message || error);
+    return res.status(500).json({
+      error: 'Failed to seed database',
+      detail: error?.message || String(error)
+    });
   }
 });
 

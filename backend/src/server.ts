@@ -91,6 +91,17 @@ server.listen(PORT, async () => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     console.log('✅ Database connection established successfully');
+
+    // Check if seed data exists
+    const userCount = await prisma.user.count();
+    if (userCount === 0) {
+      console.warn('⚠️  No users found in database! Please seed the database:');
+      console.warn('   → Option 1: Send POST request to /api/auth/seed');
+      console.warn('   → Option 2: Run: npx ts-node src/seed.ts');
+      console.warn('   → Demo login will fail until seeding is done.');
+    } else {
+      console.log(`👤 Database has ${userCount} user(s) — ready for login`);
+    }
   } catch (err: any) {
     console.error('❌ Database connection FAILED:', err?.message || err);
     console.error('   Check your DATABASE_URL environment variable.');
