@@ -7,6 +7,18 @@ import { JWT_SECRET, authenticateToken, AuthRequest, Role, requireRoles } from '
 const router = Router();
 const prisma = new PrismaClient();
 
+/**
+ * Helper: test database connectivity. Throws if unreachable.
+ */
+async function testDbConnection(): Promise<boolean> {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // POST /api/auth/login
 router.post('/login', async (req: Request, res: Response) => {
   try {
@@ -20,13 +32,23 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Password is required.' });
     }
 
+    // Check database connectivity first
+    const dbOk = await testDbConnection();
+    if (!dbOk) {
+      console.error('[AUTH] Database connection FAILED during login attempt');
+      return res.status(503).json({ 
+        error: 'Database service unavailable. Please try again in a few moments.',
+        code: 'DB_UNAVAILABLE'
+      });
+    }
+
     let user = await prisma.user.findUnique({ where: { email } });
 
     if (!user && requestedRole) {
       user = await prisma.user.findFirst({ where: { role: requestedRole } });
     }
 
-if (!user) {
+    if (!user) {
       // Log failed login attempt
       try {
         await prisma.auditLog.create({
@@ -84,9 +106,15 @@ if (!user) {
         role: user.role as Role
       }
     });
-  } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).json({ error: 'Failed to process login' });
+  } catch (error: any) {
+    console.error('[AUTH] Login error:', error?.message || error);
+    // Return the actual error message + stack in development, generic message in production
+    const isDev = process.env.NODE_ENV !== 'production';
+    return res.status(500).json({ 
+      error: 'Failed to process login',
+      ...(isDev && { detail: error?.message || String(error) }),
+      code: 'LOGIN_ERROR'
+    });
   }
 });
 

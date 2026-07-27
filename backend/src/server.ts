@@ -4,6 +4,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import { PrismaClient } from '@prisma/client';
 
 import authRoutes from './routes/auth';
 import operationsRoutes from './routes/operations';
@@ -24,6 +25,7 @@ const io = new SocketIOServer(server, {
 });
 
 const PORT = process.env.PORT || 5000;
+const prisma = new PrismaClient();
 
 // Middleware
 app.use(cors());
@@ -58,18 +60,42 @@ app.use('/api/expenses', expensesRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/invoices', invoicesRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
+// Health check — includes database connectivity status
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'disconnected';
+  let dbError: string | null = null;
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbStatus = 'connected';
+  } catch (err: any) {
+    dbStatus = 'disconnected';
+    dbError = err?.message || 'Unknown database error';
+  }
+
   res.json({
-    status: 'online',
+    status: dbStatus === 'connected' ? 'online' : 'degraded',
     platform: 'RestaurantOS – AI Powered Restaurant Management Platform',
     version: '1.0.0',
+    database: {
+      status: dbStatus,
+      ...(dbError && { error: dbError })
+    },
     timestamp: new Date().toISOString()
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 RestaurantOS Server running on http://localhost:${PORT}`);
+
+  // Test database connection at startup and log result
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('✅ Database connection established successfully');
+  } catch (err: any) {
+    console.error('❌ Database connection FAILED:', err?.message || err);
+    console.error('   Check your DATABASE_URL environment variable.');
+    console.error('   If using Render, ensure you copy the INTERNAL database URL (not external).');
+  }
 });
 
 export default app;

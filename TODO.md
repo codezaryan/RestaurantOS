@@ -1,21 +1,30 @@
-# Deployment URL Updates - Progress Tracker
+# Login 500 Error Fix - Progress Tracker
 
-## Objective
-Update all configuration files and documentation to reference the actual live deployed URLs:
-- **Frontend**: https://restaurantos-z7u8.onrender.com/
-- **Backend (Node.js/Express)**: https://restaurantos-nodebackend.onrender.com/
-- **FastAPI (AI Service)**: https://restaurantos-fastapi-service.onrender.com/
+## Root Cause Analysis
+The `/api/auth/login` endpoint returns 500 errors because:
+1. Prisma DB connection fails silently during login (likely engine binary mismatch or DB URL issue)
+2. Error details are swallowed in catch blocks - generic "Failed to process login" message
+3. No DB connectivity check at server startup to surface issues early
 
-## Steps
+## Fixes Applied
 
-- [x] Step 1: Update `RENDER_DEPLOYMENT.md` - Replaced all placeholder URLs with actual live URLs, added live URLs table at top, updated architecture diagram
-- [x] Step 2: Update `fastapi-service/main.py` - Reverted BACKEND_URL default to `http://localhost:5000/api` (local dev). Production URL set via env var only.
-- [x] Step 3: Update `fastapi-service/render.yaml` - Updated BACKEND_URL value to live backend URL (this is the Render deployment config, not source code)
-- [x] Step 4: Update `backend/src/routes/ai.ts` - Reverted FASTAPI_URL default to `http://localhost:8000` (local dev). Production URL set via env var only.
-- [x] Step 5: Update `README.md` - Added live demo links table with all 3 services + health endpoints
-- [x] Step 6: Update `frontend/api.ts` & `App.tsx` - Added documentation comment, improved Socket.io URL resolution for production (derives from VITE_API_URL)
-- [x] Step 7: Verify CORS configurations - Backend `cors()` with `origin: '*'`, FastAPI `CORSMiddleware` with `allow_origins: ["*"]`
-- [x] Step 8: Create `backend/.env.example` - Documented all env vars with local dev defaults and production comments
-- [x] Step 9: Create `fastapi-service/.env.example` - Documented BACKEND_URL env var with local dev and production examples
-- [x] Step 10: Create `fastapi-service/.gitignore` - Added `.env` to prevent accidental commit of secrets
+- [x] Step 1: Update `backend/src/routes/auth.ts` - Return actual error message in login catch block
+- [x] Step 2: Update `backend/src/server.ts` - Add Prisma DB connection test at startup
+- [x] Step 3: Update `backend/src/server.ts` - Expand `/api/health` to include DB connection status
+- [x] Step 4: Update `backend/prisma/schema.prisma` - Add additional binary targets for Render compatibility
+- [x] Step 5: Verify fixes - TypeScript compilation passes with zero errors
+- [ ] Step 6: Push changes to GitHub → Render auto-redeploys the backend
+
+## How to Re-deploy
+
+```bash
+git add .
+git commit -m "fix: login 500 error - improved DB error handling and Prisma binary targets for Render"
+git push origin main
+```
+
+Then check:
+- `https://restaurantos-nodebackend.onrender.com/api/health` — should show DB status
+- `https://restaurantos-z7u8.onrender.com` — login should work with demo credentials
+
 
