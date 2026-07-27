@@ -10,6 +10,6 @@ services:
     startCommand: uvicorn main:app --host 0.0.0.0 --port 8000
     healthCheckPath: /health
     envVars:
-      - key: BACKEND_URL
-        value: https://restaurant-os-backend.onrender.com/api
+      - key: "BACKEND_URL"
+        value: "https://restaurantos-nodebackend.onrender.com/api"
 

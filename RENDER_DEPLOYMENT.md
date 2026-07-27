@@ -1,30 +1,44 @@
 # RestaurantOS - Render Deployment Guide
 
+## 🌐 Live Deployed URLs
+
+| Service | URL | Status |
+|---------|-----|--------|
+| **Frontend App** | https://restaurantos-z7u8.onrender.com | ✅ Live |
+| **Node.js Backend** | https://restaurantos-nodebackend.onrender.com | ✅ Live |
+| **FastAPI AI Service** | https://restaurantos-fastapi-service.onrender.com | ✅ Live |
+| **Backend Health Check** | https://restaurantos-nodebackend.onrender.com/api/health | ✅ Live |
+| **FastAPI Health Check** | https://restaurantos-fastapi-service.onrender.com/health | ✅ Live |
+
 ## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Render Cloud                          │
 │                                                          │
-│  ┌──────────────┐      VITE_API_URL       ┌──────────┐  │
-│  │  Frontend     │ ──────────────────────► │  Node.js  │  │
-│  │  (Static Site)│                         │  Backend  │  │
-│  └──────────────┘                         │  (Web Svc)│  │
-│                                           │  :5000    │  │
-│                                           └─────┬─────┘  │
-│                                  FASTAPI_URL    │         │
-│                                                 ▼         │
-│                                           ┌──────────┐  │
-│                                           │  FastAPI   │  │
-│                                           │  (Web Svc) │  │
-│                                           │  :8000    │  │
-│                                           └─────┬─────┘  │
-│                                  BACKEND_URL    │         │
-│                                                 │         │
-│                                           ┌─────┴─────┐  │
-│                                           │ PostgreSQL │  │
-│                                           │ (Managed)  │  │
-│                                           └───────────┘  │
+│  ┌──────────────────┐      VITE_API_URL       ┌──────────┐  │
+│  │  Frontend         │ ──────────────────────► │  Node.js  │  │
+│  │  restaurantos-    │                         │  Backend  │  │
+│  │  z7u8.onrender.com│                         │  nodebackend│
+│  └──────────────────┘                         │  .onrender  │
+│                                                │  .com:5000 │
+│                                                └─────┬─────┘  │
+│                                     FASTAPI_URL      │         │
+│                                  ──────────────────► │         │
+│                                                 ▼           │
+│                                           ┌──────────────┐  │
+│                                           │  FastAPI      │  │
+│                                           │  fastapi-     │  │
+│                                           │  service      │  │
+│                                           │  .onrender.com│  │
+│                                           │  :8000       │  │
+│                                           └──────┬───────┘  │
+│                                  BACKEND_URL     │           │
+│                                  ◄──────────────── │         │
+│                                           ┌─────┴─────┐    │
+│                                           │ PostgreSQL │    │
+│                                           │ (Managed)   │   │
+│                                           └───────────┘    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -42,7 +56,7 @@
 1. **New** → **Web Service**
 2. Connect your GitHub repo
 3. Configure:
-   - **Name**: `restaurant-os-backend`
+   - **Name**: `restaurant-os-backend` (Render will assign `restaurantos-nodebackend.onrender.com`)
    - **Root Directory**: `backend`
    - **Runtime**: `Node`
    - **Build Command**: `npm install && npx prisma generate && npx prisma db push && npm run build`
@@ -56,18 +70,15 @@
 | `PORT` | `5000` | Render assigns a port, but keep 5000 |
 | `DATABASE_URL` | `postgresql://...` | From Step 1 — **Internal** URL (not external) |
 | `JWT_SECRET` | `restaurant-os-enterprise-secret-key` | Or any strong secret |
-| `FASTAPI_URL` | `http://restaurant-os-fastapi:8000` | Will be updated after Step 3 |
+| `FASTAPI_URL` | `https://restaurantos-fastapi-service.onrender.com` | Live FastAPI URL |
 
-> ⚠️ **Important**: After deploying the FastAPI service (Step 3), update `FASTAPI_URL` to use the actual Render internal URL:
-> `https://restaurant-os-fastapi.onrender.com`
-
-5. **Deploy** and note the URL: `https://restaurant-os-backend.onrender.com`
+5. **Deploy** and note the URL: `https://restaurantos-nodebackend.onrender.com`
 
 ## Step 3: Deploy FastAPI AI Service (Web Service)
 
 1. **New** → **Web Service**
 2. Configure:
-   - **Name**: `restaurant-os-fastapi`
+   - **Name**: `restaurant-os-fastapi` (Render will assign `restaurantos-fastapi-service.onrender.com`)
    - **Root Directory**: `fastapi-service`
    - **Runtime**: `Python 3`
    - **Build Command**: `pip install -r requirements.txt`
@@ -84,21 +95,15 @@
 
 | Variable | Value | Notes |
 |----------|-------|-------|
-| `BACKEND_URL` | `https://restaurant-os-backend.onrender.com/api` | Full Node.js backend URL + `/api` |
+| `BACKEND_URL` | `https://restaurantos-nodebackend.onrender.com/api` | Full Node.js backend URL + `/api` |
 
-4. **Deploy** and note the URL: `https://restaurant-os-fastapi.onrender.com`
-
-5. **Go back to Backend (Step 2)** and update `FASTAPI_URL` to:
-   ```
-   https://restaurant-os-fastapi.onrender.com
-   ```
-   Then manually trigger a **Deploy** on the backend service.
+5. **Deploy** and note the URL: `https://restaurantos-fastapi-service.onrender.com`
 
 ## Step 4: Deploy Frontend (Static Site)
 
 1. **New** → **Static Site**
 2. Configure:
-   - **Name**: `restaurant-os-frontend`
+   - **Name**: `restaurant-os-frontend` (Render will assign `restaurantos-z7u8.onrender.com`)
    - **Root Directory**: `frontend`
    - **Build Command**: `npm install && npm run build`
    - **Publish Directory**: `dist` ❗ **(NOT `frontend/build` - this is critical)**
@@ -107,7 +112,7 @@
 
 | Variable | Value | Notes |
 |----------|-------|-------|
-| `VITE_API_URL` | `https://restaurant-os-backend.onrender.com/api` | Full backend URL + `/api` |
+| `VITE_API_URL` | `https://restaurantos-nodebackend.onrender.com/api` | Full backend URL + `/api` |
 
 4. **Deploy**
 
@@ -130,9 +135,9 @@ Alternatively, you can add a post-deploy command or run it locally by connecting
 
 After all services are deployed and healthy:
 
-1. Check backend health: `https://restaurant-os-backend.onrender.com/api/health`
-2. Check FastAPI health: `https://restaurant-os-fastapi.onrender.com/health`
-3. Open frontend URL: `https://restaurant-os-frontend.onrender.com`
+1. Check backend health: `https://restaurantos-nodebackend.onrender.com/api/health`
+2. Check FastAPI health: `https://restaurantos-fastapi-service.onrender.com/health`
+3. Open frontend URL: `https://restaurantos-z7u8.onrender.com`
 4. Login with: `owner@restaurantos.io` / `password123`
 
 ## Troubleshooting

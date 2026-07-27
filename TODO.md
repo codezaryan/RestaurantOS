@@ -1,16 +1,21 @@
-# TODO: Fix Missing Frontend Environment Variables
+# Deployment URL Updates - Progress Tracker
 
-## Steps to Complete
+## Objective
+Update all configuration files and documentation to reference the actual live deployed URLs:
+- **Frontend**: https://restaurantos-z7u8.onrender.com/
+- **Backend (Node.js/Express)**: https://restaurantos-nodebackend.onrender.com/
+- **FastAPI (AI Service)**: https://restaurantos-fastapi-service.onrender.com/
 
-- [x] Analyze the frontend-backend connection (api.ts, vite.config.ts, Dockerfile, docker-compose.yml)
-- [x] Present plan and get user approval
+## Steps
 
-- [x] Step 1: Create `frontend/.env.example` with documentation
-- [x] Step 2: Create `frontend/.env` with default values for local dev
-- [x] Step 3: Update `frontend/.gitignore` to include `.env`
-- [x] Step 4: Update `frontend/Dockerfile` to accept `VITE_API_URL` build arg
-- [x] Step 5: Update `docker-compose.yml` to pass `VITE_API_URL` build args to frontend
-- [x] Step 6: Verify all changes are correct
-- [x] Step 7: Created RENDER_DEPLOYMENT.md with step-by-step guide for deploying all 3 services + PostgreSQL
-- [x] Step 8: Fixed Prisma OpenSSL compatibility issue (added binaryTargets + openssl in Dockerfile)
+- [x] Step 1: Update `RENDER_DEPLOYMENT.md` - Replaced all placeholder URLs with actual live URLs, added live URLs table at top, updated architecture diagram
+- [x] Step 2: Update `fastapi-service/main.py` - Reverted BACKEND_URL default to `http://localhost:5000/api` (local dev). Production URL set via env var only.
+- [x] Step 3: Update `fastapi-service/render.yaml` - Updated BACKEND_URL value to live backend URL (this is the Render deployment config, not source code)
+- [x] Step 4: Update `backend/src/routes/ai.ts` - Reverted FASTAPI_URL default to `http://localhost:8000` (local dev). Production URL set via env var only.
+- [x] Step 5: Update `README.md` - Added live demo links table with all 3 services + health endpoints
+- [x] Step 6: Update `frontend/api.ts` & `App.tsx` - Added documentation comment, improved Socket.io URL resolution for production (derives from VITE_API_URL)
+- [x] Step 7: Verify CORS configurations - Backend `cors()` with `origin: '*'`, FastAPI `CORSMiddleware` with `allow_origins: ["*"]`
+- [x] Step 8: Create `backend/.env.example` - Documented all env vars with local dev defaults and production comments
+- [x] Step 9: Create `fastapi-service/.env.example` - Documented BACKEND_URL env var with local dev and production examples
+- [x] Step 10: Create `fastapi-service/.gitignore` - Added `.env` to prevent accidental commit of secrets
 

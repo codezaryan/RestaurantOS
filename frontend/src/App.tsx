@@ -95,8 +95,9 @@ export const App: React.FC = () => {
 
     loadAllData();
 
-    // Socket.io Listener
-    const socketUrl = import.meta.env.VITE_WS_URL || undefined;
+    // Socket.io Listener — connect to backend via VITE_API_URL base in production, or localhost in dev
+    const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api$/, '');
+    const socketUrl = import.meta.env.VITE_WS_URL || apiBase || undefined;
     const socket = io(socketUrl);
     socket.on('new_order', (newOrder: Order) => {
       setOrders(prev => [newOrder, ...prev]);

@@ -4,6 +4,7 @@ import {
   AIShortagePrediction, AIReorderRecommendation, AIPricingSuggestion, AIPrepTimeEstimate, AIWasteAnalysis 
 } from './types';
 
+// API base URL: Use VITE_API_URL env var (set on Render), fall back to /api proxy for local dev
 const API_BASE = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
 const savedToken = localStorage.getItem('restaurant_os_token');

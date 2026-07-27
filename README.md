@@ -6,6 +6,20 @@
 
 ---
 
+## 🚀 Live Demo (Deployed on Render)
+
+| Service | URL | Status |
+|---------|-----|--------|
+| 🖥️ **Frontend App** | [https://restaurantos-z7u8.onrender.com](https://restaurantos-z7u8.onrender.com) | ✅ Live |
+| ⚙️ **Node.js Backend** | [https://restaurantos-nodebackend.onrender.com](https://restaurantos-nodebackend.onrender.com) | ✅ Live |
+| 🤖 **FastAPI AI Service** | [https://restaurantos-fastapi-service.onrender.com](https://restaurantos-fastapi-service.onrender.com) | ✅ Live |
+| ❤️ **Backend Health** | [https://restaurantos-nodebackend.onrender.com/api/health](https://restaurantos-nodebackend.onrender.com/api/health) | ✅ Live |
+| ❤️ **FastAPI Health** | [https://restaurantos-fastapi-service.onrender.com/health](https://restaurantos-fastapi-service.onrender.com/health) | ✅ Live |
+
+> **Quick Login:** Use any demo account email with password `password123` (e.g., `owner@restaurantos.io`)
+
+---
+
 ## 🌟 Key Features & Core Modules
 
 ### 1. 🔐 Secure Authentication & Role-Based Access Control (RBAC)

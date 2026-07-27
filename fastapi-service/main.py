@@ -29,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:5000/api")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:5000/api")
 
 # ─── Pydantic Models ───────────────────────────────────────────
 
