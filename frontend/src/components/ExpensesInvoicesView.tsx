@@ -7,16 +7,28 @@ interface ExpensesInvoicesViewProps {
   expenses: Expense[];
   invoices: Invoice[];
   onUploadInvoice: (formData: FormData) => void;
+  onCreateExpense?: (data: { title: string; amount: number; notes?: string }) => Promise<void>;
+  onDeleteExpense?: (id: string) => Promise<void>;
+  onDeleteInvoice?: (id: string) => Promise<void>;
 }
 
 export const ExpensesInvoicesView: React.FC<ExpensesInvoicesViewProps> = ({
   expenses,
   invoices,
-  onUploadInvoice
+  onUploadInvoice,
+  onCreateExpense,
+  onDeleteExpense,
+  onDeleteInvoice
 }) => {
   const [activeTab, setActiveTab] = useState<'invoices' | 'expenses'>('invoices');
   const [uploading, setUploading] = useState<boolean>(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+  // Modal State for New Expense
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
+  const [expenseTitle, setExpenseTitle] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseNotes, setExpenseNotes] = useState('');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -205,35 +217,121 @@ export const ExpensesInvoicesView: React.FC<ExpensesInvoicesViewProps> = ({
 
       {/* TAB 2: EXPENSE LEDGER */}
       {activeTab === 'expenses' && (
-        <div className="glass-card rounded-2xl border border-slate-800 overflow-hidden">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/90 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
-              <tr>
-                <th className="p-4">Expense Title</th>
-                <th className="p-4">Category</th>
-                <th className="p-4">Supplier</th>
-                <th className="p-4">Date</th>
-                <th className="p-4">Payment Status</th>
-                <th className="p-4 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300">
-              {expenses.map((exp) => (
-                <tr key={exp.id} className="hover:bg-slate-800/40 transition-all">
-                  <td className="p-4 font-bold text-white">{exp.title}</td>
-                  <td className="p-4 text-slate-400">{exp.category?.name || 'Raw Food Supplies'}</td>
-                  <td className="p-4 text-slate-400">{exp.supplier?.name || 'N/A'}</td>
-                  <td className="p-4 text-slate-400">{new Date(exp.date).toLocaleDateString()}</td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      {exp.paymentStatus}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right font-black text-emerald-400">${exp.amount.toFixed(2)}</td>
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowAddExpenseModal(true)}
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md shadow-purple-500/20"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Record Expense</span>
+            </button>
+          </div>
+
+          <div className="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-900/90 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
+                <tr>
+                  <th className="p-4">Expense Title</th>
+                  <th className="p-4">Category</th>
+                  <th className="p-4">Supplier</th>
+                  <th className="p-4">Date</th>
+                  <th className="p-4">Payment Status</th>
+                  <th className="p-4 text-right">Amount</th>
+                  <th className="p-4 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                {expenses.map((exp) => (
+                  <tr key={exp.id} className="hover:bg-slate-800/40 transition-all">
+                    <td className="p-4 font-bold text-white">{exp.title}</td>
+                    <td className="p-4 text-slate-400">{exp.category?.name || 'Raw Food Supplies'}</td>
+                    <td className="p-4 text-slate-400">{exp.supplier?.name || 'N/A'}</td>
+                    <td className="p-4 text-slate-400">{new Date(exp.date).toLocaleDateString()}</td>
+                    <td className="p-4">
+                      <span className="px-2.5 py-0.5 text-[10px] font-extrabold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        {exp.paymentStatus}
+                      </span>
+                    </td>
+                    <td className="p-4 text-right font-black text-emerald-400">${exp.amount.toFixed(2)}</td>
+                    <td className="p-4 text-right">
+                      {onDeleteExpense && (
+                        <button
+                          onClick={() => onDeleteExpense(exp.id)}
+                          className="text-rose-400 hover:text-rose-300 text-xs font-bold px-2 py-1 rounded bg-slate-800"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Add Expense Modal */}
+      {showAddExpenseModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-card max-w-md w-full p-6 rounded-2xl border border-slate-700 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white">Record Operating Expense</h3>
+              <button onClick={() => setShowAddExpenseModal(false)} className="text-slate-400 hover:text-white">&times;</button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Expense Title</label>
+                <input
+                  type="text"
+                  value={expenseTitle}
+                  onChange={e => setExpenseTitle(e.target.value)}
+                  placeholder="e.g. Organic Dairy & Produce Batch"
+                  className="w-full glass-input p-2.5 rounded-xl text-white border border-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Amount ($)</label>
+                <input
+                  type="number"
+                  value={expenseAmount}
+                  onChange={e => setExpenseAmount(e.target.value)}
+                  placeholder="250.00"
+                  className="w-full glass-input p-2.5 rounded-xl text-white border border-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Notes</label>
+                <input
+                  type="text"
+                  value={expenseNotes}
+                  onChange={e => setExpenseNotes(e.target.value)}
+                  placeholder="Optional expense description"
+                  className="w-full glass-input p-2.5 rounded-xl text-white border border-slate-700"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2">
+              <button onClick={() => setShowAddExpenseModal(false)} className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-300">Cancel</button>
+              <button
+                onClick={async () => {
+                  if (!expenseTitle || !expenseAmount || !onCreateExpense) return;
+                  await onCreateExpense({ title: expenseTitle, amount: Number(expenseAmount), notes: expenseNotes });
+                  setShowAddExpenseModal(false);
+                  setExpenseTitle('');
+                  setExpenseAmount('');
+                }}
+                className="px-5 py-2 rounded-xl bg-purple-600 text-xs font-bold text-white shadow-lg shadow-purple-500/20"
+              >
+                Save Expense
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -10,6 +10,11 @@ interface OperationsViewProps {
   onUpdateTableStatus: (id: string, status: string) => void;
   onUpdateOrderStatus: (id: string, status: string, paymentStatus?: string) => void;
   onCreateOrder: (tableId: string, items: { menuItemId: string; quantity: number }[]) => void;
+  onCreateTable?: (data: { tableNumber: string; capacity: number; section?: string }) => Promise<void>;
+  onDeleteTable?: (id: string) => Promise<void>;
+  onCreateMenuItem?: (data: { name: string; price: number; categoryId: string; description?: string }) => Promise<void>;
+  onDeleteMenuItem?: (id: string) => Promise<void>;
+  onDeleteOrder?: (id: string) => Promise<void>;
 }
 
 export const OperationsView: React.FC<OperationsViewProps> = ({
@@ -19,11 +24,28 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   currentRole,
   onUpdateTableStatus,
   onUpdateOrderStatus,
-  onCreateOrder
+  onCreateOrder,
+  onCreateTable,
+  onDeleteTable,
+  onCreateMenuItem,
+  onDeleteMenuItem,
+  onDeleteOrder
 }) => {
   const [subTab, setSubTab] = useState<'tables' | 'kds' | 'menu'>('tables');
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [newOrderItems, setNewOrderItems] = useState<{ menuItemId: string; quantity: number }[]>([]);
+
+  // Modals state
+  const [showAddTableModal, setShowAddTableModal] = useState(false);
+  const [tableNumber, setTableNumber] = useState('');
+  const [tableCapacity, setTableCapacity] = useState('4');
+  const [tableSection, setTableSection] = useState('Main Dining');
+
+  const [showAddMenuModal, setShowAddMenuModal] = useState(false);
+  const [menuName, setMenuName] = useState('');
+  const [menuPrice, setMenuPrice] = useState('15.00');
+  const [menuDesc, setMenuDesc] = useState('');
+  const [menuCategoryId, setMenuCategoryId] = useState('');
 
   // KDS Columns
   const pendingOrders = orders.filter(o => o.status === 'PENDING');
@@ -88,6 +110,18 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
       {/* SUBTAB 1: TABLES */}
       {subTab === 'tables' && (
         <div className="space-y-4">
+          {(currentRole === 'OWNER' || currentRole === 'MANAGER') && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowAddTableModal(true)}
+                className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-500/20"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Dining Table</span>
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {tables.map((t) => {
               const activeOrder = t.orders?.[0];
@@ -107,14 +141,25 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-black text-white">{t.tableNumber}</span>
-                    <span className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full ${
-                      isOccupied ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                      isReserved ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                      isCleaning ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                      'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    }`}>
-                      {t.status}
-                    </span>
+                    <div className="flex items-center space-x-1.5">
+                      <span className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full ${
+                        isOccupied ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                        isReserved ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                        isCleaning ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                        'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      }`}>
+                        {t.status}
+                      </span>
+                      {onDeleteTable && (currentRole === 'OWNER' || currentRole === 'MANAGER') && (
+                        <button
+                          onClick={() => onDeleteTable(t.id)}
+                          className="text-slate-500 hover:text-rose-400 text-xs font-bold px-1"
+                          title="Delete Table"
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <p className="text-xs text-slate-400 mt-1">{t.section} &bull; Capacity {t.capacity} guests</p>
@@ -329,6 +374,70 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* Add Table Modal */}
+      {showAddTableModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-card max-w-md w-full p-6 rounded-2xl border border-slate-700 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-white">Add Dining Table</h3>
+              <button onClick={() => setShowAddTableModal(false)} className="text-slate-400 hover:text-white">&times;</button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Table Number / Label</label>
+                <input
+                  type="text"
+                  value={tableNumber}
+                  onChange={e => setTableNumber(e.target.value)}
+                  placeholder="e.g. Table 15"
+                  className="w-full glass-input p-2.5 rounded-xl text-white border border-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Seating Capacity</label>
+                <input
+                  type="number"
+                  value={tableCapacity}
+                  onChange={e => setTableCapacity(e.target.value)}
+                  placeholder="4"
+                  className="w-full glass-input p-2.5 rounded-xl text-white border border-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Section</label>
+                <select
+                  value={tableSection}
+                  onChange={e => setTableSection(e.target.value)}
+                  className="w-full glass-input p-2.5 rounded-xl text-white border border-slate-700 bg-slate-900"
+                >
+                  <option value="Main Dining">Main Dining</option>
+                  <option value="Patio Window">Patio Window</option>
+                  <option value="VIP Lounge">VIP Lounge</option>
+                  <option value="Bar & Counter">Bar & Counter</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2">
+              <button onClick={() => setShowAddTableModal(false)} className="px-4 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-300">Cancel</button>
+              <button
+                onClick={async () => {
+                  if (!tableNumber || !onCreateTable) return;
+                  await onCreateTable({ tableNumber, capacity: Number(tableCapacity), section: tableSection });
+                  setShowAddTableModal(false);
+                  setTableNumber('');
+                }}
+                className="px-5 py-2 rounded-xl bg-blue-600 text-xs font-bold text-white shadow-lg shadow-blue-500/20"
+              >
+                Create Table
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

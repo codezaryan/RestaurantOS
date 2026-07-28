@@ -8,6 +8,10 @@ interface InventoryViewProps {
   suppliers: Supplier[];
   onRecordStockMovement: (data: { ingredientId: string; type: string; quantity: number; reason?: string }) => void;
   onCreatePurchaseOrder: (supplierId: string, items: { ingredientId: string; quantity: number; unitCost: number }[]) => void;
+  onCreateIngredient?: (data: any) => Promise<void>;
+  onDeleteIngredient?: (id: string) => Promise<void>;
+  onCreateSupplier?: (data: any) => Promise<void>;
+  onDeleteSupplier?: (id: string) => Promise<void>;
 }
 
 interface PurchaseOrder {

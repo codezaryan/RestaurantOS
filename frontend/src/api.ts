@@ -44,8 +44,16 @@ export const api = {
     const res = await axios.get<Table[]>(`${API_BASE}/operations/tables`);
     return res.data;
   },
+  createTable: async (data: any) => {
+    const res = await axios.post(`${API_BASE}/operations/tables`, data);
+    return res.data;
+  },
   updateTableStatus: async (id: string, status: string) => {
     const res = await axios.patch(`${API_BASE}/operations/tables/${id}/status`, { status });
+    return res.data;
+  },
+  deleteTable: async (id: string) => {
+    const res = await axios.delete(`${API_BASE}/operations/tables/${id}`);
     return res.data;
   },
   getMenu: async () => {
@@ -54,6 +62,14 @@ export const api = {
   },
   createMenuItem: async (data: any) => {
     const res = await axios.post(`${API_BASE}/operations/menu`, data);
+    return res.data;
+  },
+  updateMenuItem: async (id: string, data: any) => {
+    const res = await axios.patch(`${API_BASE}/operations/menu/${id}`, data);
+    return res.data;
+  },
+  deleteMenuItem: async (id: string) => {
+    const res = await axios.delete(`${API_BASE}/operations/menu/${id}`);
     return res.data;
   },
   getOrders: async (status?: string) => {
@@ -68,6 +84,10 @@ export const api = {
     const res = await axios.patch(`${API_BASE}/operations/orders/${id}/status`, { status, paymentStatus, paymentMethod });
     return res.data;
   },
+  deleteOrder: async (id: string) => {
+    const res = await axios.delete(`${API_BASE}/operations/orders/${id}`);
+    return res.data;
+  },
 
   // Inventory
   getIngredients: async () => {
@@ -78,6 +98,14 @@ export const api = {
     const res = await axios.post(`${API_BASE}/inventory/ingredients`, data);
     return res.data;
   },
+  updateIngredient: async (id: string, data: any) => {
+    const res = await axios.patch(`${API_BASE}/inventory/ingredients/${id}`, data);
+    return res.data;
+  },
+  deleteIngredient: async (id: string) => {
+    const res = await axios.delete(`${API_BASE}/inventory/ingredients/${id}`);
+    return res.data;
+  },
   recordStockMovement: async (data: { ingredientId: string; type: string; quantity: number; reason?: string }) => {
     const res = await axios.post(`${API_BASE}/inventory/stock-movement`, data);
     return res.data;
@@ -86,12 +114,24 @@ export const api = {
     const res = await axios.get<Supplier[]>(`${API_BASE}/inventory/suppliers`);
     return res.data;
   },
+  createSupplier: async (data: any) => {
+    const res = await axios.post(`${API_BASE}/inventory/suppliers`, data);
+    return res.data;
+  },
+  updateSupplier: async (id: string, data: any) => {
+    const res = await axios.patch(`${API_BASE}/inventory/suppliers/${id}`, data);
+    return res.data;
+  },
+  deleteSupplier: async (id: string) => {
+    const res = await axios.delete(`${API_BASE}/inventory/suppliers/${id}`);
+    return res.data;
+  },
   getStockMovements: async () => {
     const res = await axios.get(`${API_BASE}/inventory/movements`);
     return res.data;
   },
   getPurchaseOrders: async () => {
-    const res = await axios.get(`${API_BASE}/inventory/purchase-orders`);
+    const res = await axios.get<any[]>(`${API_BASE}/inventory/purchase-orders`);
     return res.data;
   },
   createPurchaseOrder: async (data: any) => {
@@ -102,6 +142,18 @@ export const api = {
   // Expenses & Invoices
   getExpenses: async () => {
     const res = await axios.get<Expense[]>(`${API_BASE}/expenses`);
+    return res.data;
+  },
+  createExpense: async (data: any) => {
+    const res = await axios.post(`${API_BASE}/expenses`, data);
+    return res.data;
+  },
+  updateExpense: async (id: string, data: any) => {
+    const res = await axios.patch(`${API_BASE}/expenses/${id}`, data);
+    return res.data;
+  },
+  deleteExpense: async (id: string) => {
+    const res = await axios.delete(`${API_BASE}/expenses/${id}`);
     return res.data;
   },
   getExpenseSummary: async () => {
@@ -116,6 +168,10 @@ export const api = {
     const res = await axios.post(`${API_BASE}/invoices/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
+    return res.data;
+  },
+  deleteInvoice: async (id: string) => {
+    const res = await axios.delete(`${API_BASE}/invoices/${id}`);
     return res.data;
   },
   exportExpenseRegisterExcelUrl: () => `${API_BASE}/invoices/export-excel`,
