@@ -33,6 +33,18 @@ export const expensesRepository = {
         category: true
       }
     });
+  },
+
+  update(id: string, data: any) {
+    return prisma.expense.update({
+      where: { id },
+      data,
+      include: { category: true, supplier: true }
+    });
+  },
+
+  delete(id: string) {
+    return prisma.expense.delete({ where: { id } });
   }
 
 };

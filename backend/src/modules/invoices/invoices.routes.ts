@@ -31,4 +31,11 @@ router.get(
     controller.exportExcel
 );
 
+router.delete(
+    "/:id",
+    authenticateToken,
+    requireRoles("OWNER", "MANAGER"),
+    controller.deleteInvoice
+);
+
 export default router;

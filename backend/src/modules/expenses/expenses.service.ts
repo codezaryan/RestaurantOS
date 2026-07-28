@@ -46,6 +46,14 @@ export const expensesService = {
       categoryBreakdown
     };
 
+  },
+
+  async update(id: string, data: any) {
+    return expensesRepository.update(id, data);
+  },
+
+  async delete(id: string) {
+    return expensesRepository.delete(id);
   }
 
 };

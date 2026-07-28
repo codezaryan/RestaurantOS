@@ -6,12 +6,12 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
 
-import authRoutes from './routes/auth';
-import operationsRoutes from './routes/operations';
-import inventoryRoutes from './routes/inventory';
-import expensesRoutes from './routes/expenses';
-import aiRoutes from './routes/ai';
-import invoicesRoutes from './routes/invoices';
+import authRoutes from './modules/auth';
+import operationsRoutes from './modules/operations';
+import inventoryRoutes from './modules/inventory';
+import expensesRoutes from './modules/expenses';
+import aiRoutes from './modules/ai';
+import invoicesRoutes from './modules/invoices';
 
 dotenv.config();
 
@@ -52,7 +52,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// API Routes
+// API Routes (all imported from feature-based modules)
 app.use('/api/auth', authRoutes);
 app.use('/api/operations', operationsRoutes);
 app.use('/api/inventory', inventoryRoutes);

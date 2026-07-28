@@ -58,3 +58,21 @@ export const summary = async (_req: Request, res: Response) => {
   }
 
 };
+
+export const update = async (req: Request, res: Response) => {
+  try {
+    const expense = await expensesService.update(req.params.id, req.body);
+    return res.json(expense);
+  } catch {
+    return res.status(500).json({ error: "Failed to update expense" });
+  }
+};
+
+export const remove = async (req: Request, res: Response) => {
+  try {
+    await expensesService.delete(req.params.id);
+    return res.json({ message: "Expense deleted successfully" });
+  } catch {
+    return res.status(500).json({ error: "Failed to delete expense" });
+  }
+};

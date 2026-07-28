@@ -1,44 +1,35 @@
-# Login 500 Error Fix - Progress Tracker
+# Migration to Feature-Based Architecture
 
-## Root Causes Identified
+## Steps
 
-1. **Missing `binaryTargets` in Prisma schema** — The schema only targets the build platform (`native`). On Render which uses different OpenSSL/libc variants, the Prisma engine binary crashes before executing any query → 500 error.
-2. **Database not seeded** — No user records exist in the Render PostgreSQL. Even if Prisma connected, login would return 401, but the engine crash happens first.
-3. **Error details hidden in production** — Catch blocks returned a generic message without logging the full stack trace.
+### Step 1: Complete the `operations/` module
+- [x] Implement `operations.types.ts` - Table, Menu, Order types
+- [x] Implement `operations.validation.ts` - Validation functions
+- [x] Implement `operations.repository.ts` - Database access layer
+- [x] Implement `operations.service.ts` - Business logic layer
+- [x] Implement `operations.controller.ts` - Request handlers
+- [x] Implement `operations.routes.ts` - Route definitions
 
-## Fixes Applied
+### Step 2: Fix `invoices.service.ts` imports
+- [x] Fix OCRService import to point to correct path
+- [x] Fix ExcelService import to point to correct path
 
-- [x] **Prisma Schema** (`backend/prisma/schema.prisma`): Added `binaryTargets` = `["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x", "linux-musl-openssl-1.1.x"]` for cross-platform compatibility
-- [x] **Seed Endpoint** (`backend/src/routes/auth.ts`): Added `POST /api/auth/seed` — creates all 6 demo users via API call (no Render Shell needed)
-- [x] **Startup Seed Check** (`backend/src/server.ts`): Logs user count on server start — warns if no users found
-- [x] **Improved Error Logging** (`backend/src/routes/auth.ts`): Always logs full stack trace server-side + includes `prismaCode` in dev responses
-- [x] **Verify TypeScript compilation** — `EXIT_CODE: 0`, zero errors
-- [ ] **Push to GitHub → Render auto-redeploys**
+### Step 3: Update `server.ts` to use module routes
+- [x] Replace old route imports with module imports
 
-## How to Seed & Test After Redeploy
+### Step 4: Remove old monolithic route files
+- [x] Delete `backend/src/routes/` directory
 
-```bash
-# Step 1: Seed the database via API (no Shell access needed)
-curl -X POST https://restaurantos-nodebackend.onrender.com/api/auth/seed
+### Step 5: Remove empty dead directory
+- [x] Delete `backend/src/src/` directory
 
-# Step 2: Verify health check
-curl https://restaurantos-nodebackend.onrender.com/api/health
+### Step 6: Fix invoices repository (currently empty/incomplete)
+- [x] Implement `invoices.repository.ts` with all required methods
 
-# Step 3: Test login
-curl -X POST https://restaurantos-nodebackend.onrender.com/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"owner@restaurantos.io","password":"password123"}'
-
-# Step 4: Open frontend
-open https://restaurantos-z7u8.onrender.com
-```
-
-## How to Re-deploy
-
-```bash
-git add .
-git commit -m "fix: login 500 error - Prisma binaryTargets, seed endpoint, improved error handling"
-git push origin main
-```
+### Step 7: Verification and Cleanup
+- [x] Fixed leftover artifact in `operations.validation.ts`
+- [x] Confirmed all 6 modules follow feature-based architecture (`ai`, `auth`, `expenses`, `inventory`, `invoices`, `operations`)
+- [x] Confirmed old monolithic `routes/` directory was safely removed
+- [x] Verified successful TypeScript compilation & build for backend (`tsc`) and frontend (`vite build`)
 
 

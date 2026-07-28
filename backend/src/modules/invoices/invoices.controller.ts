@@ -87,3 +87,12 @@ export const exportExcel = async (
     }
 
 };
+
+export const deleteInvoice = async (req: Request, res: Response) => {
+    try {
+        await invoicesService.deleteInvoice(req.params.id);
+        return res.json({ message: "Invoice deleted successfully" });
+    } catch {
+        return res.status(500).json({ error: "Failed to delete invoice" });
+    }
+};

@@ -1,5 +1,5 @@
-import { OCRService } from "../ai/ocr.service";
-import { ExcelService } from "../ai/excel.service";
+import { OCRService } from "../../services/ocrService";
+import { ExcelService } from "../../services/excelService";
 import { invoicesRepository } from "./invoices.repository";
 
 class InvoicesService {
@@ -77,6 +77,10 @@ class InvoicesService {
 
     async exportExpenseRegister() {
         return this.excelService.generateExpenseRegister();
+    }
+
+    async deleteInvoice(id: string) {
+        return invoicesRepository.deleteInvoice(id);
     }
 
 }

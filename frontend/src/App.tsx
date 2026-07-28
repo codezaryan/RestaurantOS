@@ -6,13 +6,13 @@ import {
 import { api } from './api';
 import { Navbar } from './components/Navbar';
 import { Sidebar, NavTab } from './components/Sidebar';
-import { DashboardView } from './components/DashboardView';
-import { OperationsView } from './components/OperationsView';
-import { InventoryView } from './components/InventoryView';
-import { ExpensesInvoicesView } from './components/ExpensesInvoicesView';
-import { AIStudioView } from './components/AIStudioView';
-import { StaffView } from './components/StaffView';
-import { LoginScreen } from './components/LoginScreen';
+import { DashboardView } from './features/dashboard';
+import { OperationsView } from './features/operations';
+import { InventoryView } from './features/inventory';
+import { ExpensesInvoicesView } from './features/expenses';
+import { AIStudioView } from './features/ai-studio';
+import { StaffView } from './features/staff';
+import { LoginScreen } from './features/auth';
 import { io } from 'socket.io-client';
 
 export const App: React.FC = () => {
@@ -138,44 +138,76 @@ export const App: React.FC = () => {
   };
 
   // Handler functions
+  const handleCreateTable = async (data: { tableNumber: string; capacity: number; section?: string }) => {
+    await api.createTable(data);
+    setTables(await api.getTables());
+  };
+
+  const handleDeleteTable = async (id: string) => {
+    await api.deleteTable(id);
+    setTables(await api.getTables());
+  };
+
   const handleUpdateTableStatus = async (id: string, status: string) => {
     await api.updateTableStatus(id, status);
-    const updated = await api.getTables();
-    setTables(updated);
+    setTables(await api.getTables());
+  };
+
+  const handleCreateMenuItem = async (data: any) => {
+    await api.createMenuItem(data);
+    setMenuItems(await api.getMenu());
+  };
+
+  const handleDeleteMenuItem = async (id: string) => {
+    await api.deleteMenuItem(id);
+    setMenuItems(await api.getMenu());
   };
 
   const handleUpdateOrderStatus = async (id: string, status: string, paymentStatus?: string) => {
     await api.updateOrderStatus(id, status, paymentStatus);
-    const updated = await api.getOrders();
-    setOrders(updated);
+    setOrders(await api.getOrders());
   };
 
   const handleCreateOrder = async (tableId: string, items: { menuItemId: string; quantity: number }[]) => {
     await api.createOrder({ tableId, items });
-    const updatedOrders = await api.getOrders();
-    const updatedTables = await api.getTables();
-    setOrders(updatedOrders);
-    setTables(updatedTables);
+    setOrders(await api.getOrders());
+    setTables(await api.getTables());
+  };
+
+  const handleDeleteOrder = async (id: string) => {
+    await api.deleteOrder(id);
+    setOrders(await api.getOrders());
   };
 
   const handleRecordStockMovement = async (data: { ingredientId: string; type: string; quantity: number; reason?: string }) => {
     await api.recordStockMovement(data);
-    const updatedIng = await api.getIngredients();
-    setIngredients(updatedIng);
+    setIngredients(await api.getIngredients());
+  };
+
+  const handleCreateExpense = async (data: { title: string; amount: number; notes?: string }) => {
+    await api.createExpense(data);
+    setExpenses(await api.getExpenses());
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    await api.deleteExpense(id);
+    setExpenses(await api.getExpenses());
   };
 
   const handleUploadInvoice = async (formData: FormData) => {
     await api.uploadInvoice(formData);
-    const updatedInvoices = await api.getInvoices();
-    const updatedExpenses = await api.getExpenses();
-    setInvoices(updatedInvoices);
-    setExpenses(updatedExpenses);
+    setInvoices(await api.getInvoices());
+    setExpenses(await api.getExpenses());
+  };
+
+  const handleDeleteInvoice = async (id: string) => {
+    await api.deleteInvoice(id);
+    setInvoices(await api.getInvoices());
   };
 
   const handleAddStaff = async (data: { name: string; email: string; role: Role; phone?: string }) => {
     await api.createStaff(data);
-    const updatedStaff = await api.getStaff();
-    setStaff(updatedStaff);
+    setStaff(await api.getStaff());
   };
 
   // If not authenticated, show login screen
@@ -222,6 +254,11 @@ export const App: React.FC = () => {
                   onUpdateTableStatus={handleUpdateTableStatus}
                   onUpdateOrderStatus={handleUpdateOrderStatus}
                   onCreateOrder={handleCreateOrder}
+                  onCreateTable={handleCreateTable}
+                  onDeleteTable={handleDeleteTable}
+                  onCreateMenuItem={handleCreateMenuItem}
+                  onDeleteMenuItem={handleDeleteMenuItem}
+                  onDeleteOrder={handleDeleteOrder}
                 />
               )}
 
@@ -239,6 +276,9 @@ export const App: React.FC = () => {
                   expenses={expenses}
                   invoices={invoices}
                   onUploadInvoice={handleUploadInvoice}
+                  onCreateExpense={handleCreateExpense}
+                  onDeleteExpense={handleDeleteExpense}
+                  onDeleteInvoice={handleDeleteInvoice}
                 />
               )}
 

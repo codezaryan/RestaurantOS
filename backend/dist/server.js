@@ -9,12 +9,13 @@ const socket_io_1 = require("socket.io");
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
-const auth_1 = __importDefault(require("./routes/auth"));
-const operations_1 = __importDefault(require("./routes/operations"));
-const inventory_1 = __importDefault(require("./routes/inventory"));
-const expenses_1 = __importDefault(require("./routes/expenses"));
-const ai_1 = __importDefault(require("./routes/ai"));
-const invoices_1 = __importDefault(require("./routes/invoices"));
+const client_1 = require("@prisma/client");
+const auth_1 = __importDefault(require("./modules/auth"));
+const operations_1 = __importDefault(require("./modules/operations"));
+const inventory_1 = __importDefault(require("./modules/inventory"));
+const expenses_1 = __importDefault(require("./modules/expenses"));
+const ai_1 = __importDefault(require("./modules/ai"));
+const invoices_1 = __importDefault(require("./modules/invoices"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
@@ -25,6 +26,7 @@ const io = new socket_io_1.Server(server, {
     }
 });
 const PORT = process.env.PORT || 5000;
+const prisma = new client_1.PrismaClient();
 // Middleware
 app.use((0, cors_1.default)());
 app.use(express_1.default.json({ limit: '25mb' }));
@@ -44,23 +46,59 @@ io.on('connection', (socket) => {
         console.log('Socket disconnected:', socket.id);
     });
 });
-// API Routes
+// API Routes (all imported from feature-based modules)
 app.use('/api/auth', auth_1.default);
 app.use('/api/operations', operations_1.default);
 app.use('/api/inventory', inventory_1.default);
 app.use('/api/expenses', expenses_1.default);
 app.use('/api/ai', ai_1.default);
 app.use('/api/invoices', invoices_1.default);
-// Health check
-app.get('/api/health', (req, res) => {
+// Health check — includes database connectivity status
+app.get('/api/health', async (req, res) => {
+    let dbStatus = 'disconnected';
+    let dbError = null;
+    try {
+        await prisma.$queryRaw `SELECT 1`;
+        dbStatus = 'connected';
+    }
+    catch (err) {
+        dbStatus = 'disconnected';
+        dbError = err?.message || 'Unknown database error';
+    }
     res.json({
-        status: 'online',
+        status: dbStatus === 'connected' ? 'online' : 'degraded',
         platform: 'RestaurantOS – AI Powered Restaurant Management Platform',
         version: '1.0.0',
+        database: {
+            status: dbStatus,
+            ...(dbError && { error: dbError })
+        },
         timestamp: new Date().toISOString()
     });
 });
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
     console.log(`🚀 RestaurantOS Server running on http://localhost:${PORT}`);
+    // Test database connection at startup and log result
+    try {
+        await prisma.$queryRaw `SELECT 1`;
+        console.log('✅ Database connection established successfully');
+        // Check if seed data exists
+        const userCount = await prisma.user.count();
+        if (userCount === 0) {
+            console.warn('⚠️  No users found in database! Please seed the database:');
+            console.warn('   → Option 1: Send POST request to /api/auth/seed');
+            console.warn('   → Option 2: Run: npx ts-node src/seed.ts');
+            console.warn('   → Demo login will fail until seeding is done.');
+        }
+        else {
+            console.log(`👤 Database has ${userCount} user(s) — ready for login`);
+        }
+    }
+    catch (err) {
+        console.error('❌ Database connection FAILED:', err?.message || err);
+        console.error('   Check your DATABASE_URL environment variable.');
+        console.error('   If using Render, ensure you copy the INTERNAL database URL (not external).');
+    }
 });
 exports.default = app;
+//# sourceMappingURL=server.js.map

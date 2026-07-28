@@ -29,4 +29,18 @@ router.get(
   controller.summary
 );
 
+router.patch(
+  "/:id",
+  authenticateToken,
+  requireRoles("OWNER", "MANAGER"),
+  controller.update
+);
+
+router.delete(
+  "/:id",
+  authenticateToken,
+  requireRoles("OWNER", "MANAGER"),
+  controller.remove
+);
+
 export default router;
