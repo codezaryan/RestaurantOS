@@ -42,49 +42,51 @@ export const App: React.FC = () => {
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [
-        tablesData,
-        ordersData,
-        menuData,
-        ingData,
-        supData,
-        expData,
-        invData,
-        staffData,
-        shortagesData,
-        reorderData,
-        pricingData,
-        wasteData
-      ] = await Promise.all([
-        api.getTables(),
-        api.getOrders(),
-        api.getMenu(),
-        api.getIngredients(),
-        api.getSuppliers(),
-        api.getExpenses(),
-        api.getInvoices(),
-        api.getStaff(),
-        api.getAIShortagePredictions(),
-        api.getAIReorderRecommendations(),
-        api.getAIPricingSuggestions(),
-        api.getAIWasteAnalysis()
+
+      // Helper to safely fetch data — returns fallback on failure
+      const safeFetch = async <T,>(fetchFn: () => Promise<T>, fallback: T): Promise<T> => {
+        try {
+          return await fetchFn();
+        } catch (err: any) {
+          // If 401, the axios interceptor will handle it
+          if (err?.response?.status === 401) return fallback;
+          console.warn('API fetch failed (returning empty):', err?.message);
+          return fallback;
+        }
+      };
+
+      const results = await Promise.allSettled([
+        safeFetch(() => api.getTables(), [] as Table[]),
+        safeFetch(() => api.getOrders(), [] as Order[]),
+        safeFetch(() => api.getMenu(), [] as MenuItem[]),
+        safeFetch(() => api.getIngredients(), [] as Ingredient[]),
+        safeFetch(() => api.getSuppliers(), [] as Supplier[]),
+        safeFetch(() => api.getExpenses(), [] as Expense[]),
+        safeFetch(() => api.getInvoices(), [] as Invoice[]),
+        safeFetch(() => api.getStaff(), [] as User[]),
+        safeFetch(() => api.getAIShortagePredictions(), [] as AIShortagePrediction[]),
+        safeFetch(() => api.getAIReorderRecommendations(), [] as AIReorderRecommendation[]),
+        safeFetch(() => api.getAIPricingSuggestions(), [] as AIPricingSuggestion[]),
+        safeFetch(() => api.getAIWasteAnalysis(), null as AIWasteAnalysis | null),
       ]);
 
-      setTables(tablesData);
-      setOrders(ordersData);
-      setMenuItems(menuData);
-      setIngredients(ingData);
-      setSuppliers(supData);
-      setExpenses(expData);
-      setInvoices(invData);
-      setStaff(staffData);
+      const extract = <T,>(result: PromiseSettledResult<T>, fallback: T): T =>
+        result.status === 'fulfilled' ? result.value : fallback;
 
-      setShortagePredictions(shortagesData);
-      setReorderRecommendations(reorderData);
-      setPricingSuggestions(pricingData);
-      setWasteAnalysis(wasteData);
-    } catch (err) {
-      console.error('Error loading data:', err);
+      setTables(extract(results[0], []));
+      setOrders(extract(results[1], []));
+      setMenuItems(extract(results[2], []));
+      setIngredients(extract(results[3], []));
+      setSuppliers(extract(results[4], []));
+      setExpenses(extract(results[5], []));
+      setInvoices(extract(results[6], []));
+      setStaff(extract(results[7], []));
+      setShortagePredictions(extract(results[8], []));
+      setReorderRecommendations(extract(results[9], []));
+      setPricingSuggestions(extract(results[10], []));
+      setWasteAnalysis(extract(results[11], null));
+    } catch (err: any) {
+      console.error('Fatal error in loadAllData:', err);
     } finally {
       setLoading(false);
     }
@@ -94,6 +96,14 @@ export const App: React.FC = () => {
     if (!isAuthenticated) return;
 
     loadAllData();
+
+    // Listen for 401 unauthorized events from axios response interceptor
+    const handleUnauthorized = () => {
+      api.logout();
+      setIsAuthenticated(false);
+      setCurrentRole('OWNER');
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
 
     // Socket.io Listener — connect to backend via VITE_API_URL base in production, or localhost in dev
     const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/api$/, '');
@@ -107,6 +117,7 @@ export const App: React.FC = () => {
     });
 
     return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
       socket.disconnect();
     };
   }, [isAuthenticated]);
